@@ -49,19 +49,22 @@ func (s *JSONSource) Run(journeys []string) (out chan model.Journey, quit chan m
 	quit = make(chan model.Journey)
 
 	go func() {
-		totalDelay := shutdownDelay
+		var maxDelay int
 
 		for _, journey := range journeys {
 			var parsedJourney model.Journey
 			if err := json.Unmarshal([]byte(journey), &parsedJourney); err != nil {
 				fmt.Printf("Unmarshall error: %v\n", err)
 			} else {
-				totalDelay += parsedJourney.Time
 				go channelAfterDelay(out, parsedJourney, parsedJourney.Time)
+
+				if parsedJourney.Time > maxDelay {
+					maxDelay = parsedJourney.Time
+				}
 			}
 		}
 
-		go channelAfterDelay(quit, model.Journey{}, totalDelay)
+		go channelAfterDelay(quit, model.Journey{}, maxDelay + shutdownDelay)
 	}()
 
 	return
