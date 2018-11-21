@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/JDLK7/go-channels-example/pipe"
 	"time"
 	"fmt"
 	"github.com/JDLK7/go-channels-example/source"
@@ -15,8 +16,9 @@ func main() {
 		`{"id": 260, "time": 4000, "destination": "Madrid"}`,
 	}
 	source := source.New(source.JSON)
+	pipe := pipe.New(pipe.AddPrefix)
 
-	out, quit := source.Run(journeys)
+	out, quit := pipe.Run(source.Run(journeys))
 
 	startTime := time.Now().UnixNano()
 
