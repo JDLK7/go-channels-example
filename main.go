@@ -1,10 +1,9 @@
 package main
 
 import (
-	"github.com/JDLK7/go-channels-example/pipe"
-	"time"
-	"fmt"
 	"github.com/JDLK7/go-channels-example/source"
+	"github.com/JDLK7/go-channels-example/pipe"
+	"github.com/JDLK7/go-channels-example/sink"
 )
 
 func main() {
@@ -17,21 +16,9 @@ func main() {
 	}
 	source := source.New(source.JSON)
 	pipe := pipe.New(pipe.AddPrefix)
+	sink := sink.New(sink.Log)
 
 	out, quit := pipe.Run(source.Run(journeys))
 
-	startTime := time.Now().UnixNano()
-
-	isOpen := true
-	for isOpen {
-		select {
-		case inboundJourney := <- out:
-			currentTime := (time.Now().UnixNano() - startTime) / int64(time.Millisecond)
-			fmt.Printf("[T-%v] New journey arrived: %v\n", currentTime, inboundJourney)
-		case <- quit:
-			isOpen = false
-			currentTime := (time.Now().UnixNano() - startTime) / int64(time.Millisecond)
-			fmt.Printf("[T-%v] Quit\n", currentTime)
-		}
-	}
+	sink.Format(out, quit)
 }
