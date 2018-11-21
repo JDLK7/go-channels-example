@@ -8,7 +8,7 @@ import (
 
 // TestRunReturnsActiveChannel checks that the channel returned by Run sends journeys.
 func TestRunReturnsActiveChannel(t *testing.T) {
-	journeys := []string{`{"id": 1, "journey_time": 100}`}
+	journeys := []string{`{"id": 1, "time": 100}`}
 	source := New(JSON)
 
 	isActive := false
@@ -57,11 +57,40 @@ func TestRunChannelSendsJourneys(t *testing.T) {
 }
 
 func TestRunChannelSendsEveryJourney(t *testing.T) {
-	journeys := []string{`{"id": 256, "time": 3600}`, `{"id": 257, "time": 2400}`, `{"id": 258, "time": 1800}`}
+	journeys := []string{`{"id": 256, "time": 360}`, `{"id": 257, "time": 240}`, `{"id": 258, "time": 180}`}
 	expectedJourneys := []model.Journey{
-		model.Journey { Id: 256, Time: 3600 },
-		model.Journey { Id: 257, Time: 2400 },
-		model.Journey { Id: 258, Time: 1800 },
+		model.Journey { Id: 256, Time: 360 },
+		model.Journey { Id: 257, Time: 240 },
+		model.Journey { Id: 258, Time: 180 },
+	}
+	var actualJourneys []model.Journey
+
+	isOpen := true
+	source := New(JSON)
+	channel, quit := source.Run(journeys)
+
+	for isOpen {
+		select {
+		case inboundJourney := <- channel:
+			actualJourneys = append(actualJourneys, inboundJourney)
+		case <- quit:
+			isOpen = false
+		}
+	}
+
+	equalJourneys := len(expectedJourneys) == len(actualJourneys)
+
+	if !equalJourneys {
+		t.Errorf("Channel doesn't send all journeys.\nExpected journeys: %v\nActual journeys: %v", expectedJourneys, actualJourneys)
+	}
+}
+
+func TestRunChannelSendsJourneysSortByTime(t *testing.T) {
+	journeys := []string{`{"id": 256, "time": 360}`, `{"id": 257, "time": 240}`, `{"id": 258, "time": 180}`}
+	expectedJourneys := []model.Journey{
+		model.Journey { Id: 258, Time: 180 },
+		model.Journey { Id: 257, Time: 240 },
+		model.Journey { Id: 256, Time: 360 },
 	}
 	var actualJourneys []model.Journey
 
@@ -91,6 +120,6 @@ func TestRunChannelSendsEveryJourney(t *testing.T) {
 	}
 
 	if !equalJourneys {
-		t.Errorf("Channel doesn't send all journeys.\nExpected journeys: %v\nActual journeys: %v", expectedJourneys, actualJourneys)
+		t.Errorf("Channel doesn't sort journeys by time.\nExpected journeys: %v\nActual journeys: %v", expectedJourneys, actualJourneys)
 	}
 }

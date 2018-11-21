@@ -1,11 +1,15 @@
 package source
 
 import (
+	"time"
 	"encoding/json"
 	"sync"
 	"fmt"
 	"github.com/JDLK7/go-channels-example/model"
 )
+
+// shutdownDelay constant time (in miliseconds) that Run waits for sending a quit message
+const shutdownDelay = 10
 
 type JSONSource struct {
 }
@@ -14,7 +18,7 @@ type XMLSource struct {
 }
 
 type Ingestor interface {
-	Run(journeys []string) (out chan model.Journey, quit chan int)
+	Run(journeys []string) (out chan model.Journey, quit chan model.Journey)
 }
 
 var once sync.Once
@@ -35,27 +39,34 @@ func New(sourceType SourceType) Ingestor {
 	return instance
 }
 
+func channelAfterDelay(channel chan model.Journey, subject model.Journey, delay int) {
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+	channel <- subject
+}
 
-func (s *JSONSource) Run(journeys []string) (out chan model.Journey, quit chan int) {
+func (s *JSONSource) Run(journeys []string) (out chan model.Journey, quit chan model.Journey) {
 	out = make(chan model.Journey)
-	quit = make(chan int)
+	quit = make(chan model.Journey)
 
 	go func() {
+		totalDelay := shutdownDelay
+
 		for _, journey := range journeys {
 			var parsedJourney model.Journey
 			if err := json.Unmarshal([]byte(journey), &parsedJourney); err != nil {
 				fmt.Printf("Unmarshall error: %v\n", err)
 			} else {
-				out <- parsedJourney
+				totalDelay += parsedJourney.Time
+				go channelAfterDelay(out, parsedJourney, parsedJourney.Time)
 			}
 		}
 
-		quit <- 0
+		go channelAfterDelay(quit, model.Journey{}, totalDelay)
 	}()
 
 	return
 }
 
-func (s *XMLSource) Run(journeys []string) (out chan model.Journey, quit chan int) {
+func (s *XMLSource) Run(journeys []string) (out chan model.Journey, quit chan model.Journey) {
 	return
 }
