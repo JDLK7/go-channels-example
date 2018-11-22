@@ -1,15 +1,28 @@
 package source
 
 import (
-	"testing"
-	"reflect"
+	"github.com/JDLK7/go-channels-example/config"
 	"github.com/JDLK7/go-channels-example/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+	"testing"
 )
 
+type SourceTestSuite struct {
+	suite.Suite
+	config *config.ConfigManager
+}
+
+func (suite *SourceTestSuite) SetupTest() {
+	suite.config = &config.ConfigManager{
+		IngestorType:			"JSON",
+	}
+}
+
 // TestRunReturnsActiveChannel checks that the channel returned by Run sends journeys.
-func TestRunReturnsActiveChannel(t *testing.T) {
+func (suite *SourceTestSuite) TestRunReturnsActiveChannel() {
 	journeys := []string{`{"id": 1, "time": 100}`}
-	source := New(JSON)
+	source := New(suite.config)
 
 	isActive := false
 	isOpen := true
@@ -24,19 +37,17 @@ func TestRunReturnsActiveChannel(t *testing.T) {
 		}
 	}
 
-	if !isActive {
-		t.Errorf("Channel returned is inactive")
-	}
+	assert.True(suite.T(), isActive)
 }
 
-func TestRunChannelSendsJourneys(t *testing.T) {
+func (suite *SourceTestSuite) TestRunChannelSendsJourneys() {
 	journeys := []string{`{"id": 256, "time": 3600}`}
 	expectedJourney := model.Journey{
 		Id: 	256,
 		Time:	3600,
 	}
 
-	source := New(JSON)
+	source := New(suite.config)
 
 	isOpen := true
 	var actualJourney model.Journey
@@ -51,12 +62,10 @@ func TestRunChannelSendsJourneys(t *testing.T) {
 		}
 	}
 
-	if actualJourney.Id != expectedJourney.Id || actualJourney.Time != expectedJourney.Time {
-		t.Errorf("Channel returned by Run doesn't send journeys.\nExpected journey: %v\nActual journey: %v", expectedJourney, actualJourney)
-	}
+	assert.Equal(suite.T(), expectedJourney, actualJourney)
 }
 
-func TestRunChannelSendsEveryJourney(t *testing.T) {
+func (suite *SourceTestSuite) TestRunChannelSendsEveryJourney() {
 	journeys := []string{`{"id": 256, "time": 360}`, `{"id": 257, "time": 240}`, `{"id": 258, "time": 180}`}
 	expectedJourneys := []model.Journey{
 		model.Journey { Id: 256, Time: 360 },
@@ -66,7 +75,7 @@ func TestRunChannelSendsEveryJourney(t *testing.T) {
 	var actualJourneys []model.Journey
 
 	isOpen := true
-	source := New(JSON)
+	source := New(suite.config)
 	channel, quit := source.Run(journeys)
 
 	for isOpen {
@@ -78,14 +87,10 @@ func TestRunChannelSendsEveryJourney(t *testing.T) {
 		}
 	}
 
-	equalJourneys := len(expectedJourneys) == len(actualJourneys)
-
-	if !equalJourneys {
-		t.Errorf("Channel doesn't send all journeys.\nExpected journeys: %v\nActual journeys: %v", expectedJourneys, actualJourneys)
-	}
+	assert.Equal(suite.T(), len(expectedJourneys), len(actualJourneys))
 }
 
-func TestRunChannelSendsJourneysSortByTime(t *testing.T) {
+func (suite *SourceTestSuite) TestRunChannelSendsJourneysSortedByTime() {
 	journeys := []string{`{"id": 256, "time": 360}`, `{"id": 257, "time": 240}`, `{"id": 258, "time": 180}`}
 	expectedJourneys := []model.Journey{
 		model.Journey { Id: 258, Time: 180 },
@@ -95,7 +100,7 @@ func TestRunChannelSendsJourneysSortByTime(t *testing.T) {
 	var actualJourneys []model.Journey
 
 	isOpen := true
-	source := New(JSON)
+	source := New(suite.config)
 	channel, quit := source.Run(journeys)
 
 	for isOpen {
@@ -107,19 +112,10 @@ func TestRunChannelSendsJourneysSortByTime(t *testing.T) {
 		}
 	}
 
-	equalJourneys := true
+	assert.Equal(suite.T(), expectedJourneys, actualJourneys)
+}
 
-	if len(expectedJourneys) == len(actualJourneys) {
-		for i := 0; i < len(expectedJourneys); i++ {
-			if !reflect.DeepEqual(expectedJourneys[i], actualJourneys[i]) {
-				equalJourneys = false
-			}
-		}
-	} else {
-		equalJourneys = false
-	}
-
-	if !equalJourneys {
-		t.Errorf("Channel doesn't sort journeys by time.\nExpected journeys: %v\nActual journeys: %v", expectedJourneys, actualJourneys)
-	}
+// TestSourceTestSuite runs the suite
+func TestSourceTestSuite(t *testing.T) {
+	suite.Run(t, new(SourceTestSuite))
 }
