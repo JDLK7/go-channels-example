@@ -8,9 +8,10 @@ import (
 )
 
 type ConfigManager struct {
-	SourceType				string
-	ChannelAction		string
-	SinkAction			string
+	IngestorType		string
+	SourcePath			string
+	ProcessorAction	string
+	FormatterType		string
 }
 
 type ConfigManagerBehaviour interface{
@@ -19,9 +20,9 @@ type ConfigManagerBehaviour interface{
 
 func (config *ConfigManager) LogConfig() {
 	logrus.WithFields(logrus.Fields{
-		"SourceType":									ConfigManagerInstance.SourceType,
-		"ChannelAction":							ConfigManagerInstance.ChannelAction,
-		"SinkAction":									ConfigManagerInstance.SinkAction,
+		"IngestorType":									ConfigManagerInstance.IngestorType,
+		"ProcessorAction":							ConfigManagerInstance.ProcessorAction,
+		"FormatterType":								ConfigManagerInstance.FormatterType,
 	}).Info("configurationManager loaded")
 }
 
@@ -44,14 +45,16 @@ func NewConfigManager() ConfigManagerBehaviour {
 	once.Do(func() {
 		setupConfigPath()
 
-		sourceType := viper.GetString("source.type")
-		channelAction := viper.GetString("channel.action")
-		sinkAction := viper.GetString("sink.action")
+		ingestorType := viper.GetString("ingestor.type")
+		sourcePath := viper.GetString("ingestor.sourcePath")
+		channelAction := viper.GetString("processor.action")
+		formatterType := viper.GetString("formatter.type")
 
 		ConfigManagerInstance = &ConfigManager{
-			SourceType:			sourceType,
-			ChannelAction:	channelAction,
-			SinkAction:			sinkAction,
+			IngestorType:			ingestorType,
+			SourcePath:				sourcePath,
+			ProcessorAction:	channelAction,
+			FormatterType:		formatterType,
 		}
 
 		ConfigManagerInstance.LogConfig()

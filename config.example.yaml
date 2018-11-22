@@ -1,0 +1,9 @@
+ingestor:
+  type: "json"
+  sourcePath: "./assets/journeys.json"
+
+processor:
+  action: "add_predix"
+
+formatter:
+  type: "log"
