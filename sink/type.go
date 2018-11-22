@@ -1,8 +1,8 @@
 package sink
 
-type SinkType int
+type SinkType string
 
 const (
-	Log		SinkType = iota
-	File	SinkType = iota
+	Log		SinkType = "Log"
+	File	SinkType = "File"
 )

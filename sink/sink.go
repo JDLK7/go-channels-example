@@ -1,8 +1,9 @@
 package sink
 
 import (
-	"github.com/sirupsen/logrus"
+	"github.com/JDLK7/go-channels-example/config"
 	"github.com/JDLK7/go-channels-example/model"
+	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 )
@@ -16,9 +17,9 @@ type LogSink struct {}
 var once sync.Once
 var instance Formatter
 
-func New(sinkType SinkType) Formatter {
+func New(configManager *config.ConfigManager) Formatter {
 	once.Do(func() {
-		switch sinkType {
+		switch SinkType(configManager.FormatterType) {
 		case Log:
 			instance = new(LogSink)
 		}
