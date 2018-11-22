@@ -1,10 +1,15 @@
 package main
 
 import (
+	"github.com/JDLK7/go-channels-example/config"
 	"github.com/JDLK7/go-channels-example/source"
 	"github.com/JDLK7/go-channels-example/pipe"
 	"github.com/JDLK7/go-channels-example/sink"
 )
+
+func init() {
+	config.NewConfigManager()
+}
 
 func main() {
 	journeys := []string{
@@ -14,11 +19,14 @@ func main() {
 		`{"id": 259, "time": 5000, "destination": "Madrid"}`,
 		`{"id": 260, "time": 4000, "destination": "Madrid"}`,
 	}
-	source := source.New(source.JSON)
-	pipe := pipe.New(pipe.AddPrefix)
-	sink := sink.New(sink.Log)
 
-	out, quit := pipe.Run(source.Run(journeys))
+	configManager := config.ConfigManagerInstance
 
-	sink.Format(out, quit)
+	source := source.New(configManager)
+	pipe := pipe.New(configManager)
+	sink := sink.New(configManager)
+
+	sink.Format(
+		pipe.Run(
+			source.Run(journeys)))
 }
