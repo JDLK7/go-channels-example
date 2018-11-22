@@ -1,10 +1,10 @@
 package source
 
-type SourceType int
+type SourceType string
 
 const (
 	// Default ingest method
-	Default SourceType = iota
-	JSON		SourceType = iota
-	XML			SourceType = iota
+	Default SourceType = "Default"
+	JSON		SourceType = "JSON"
+	XML			SourceType = "XML"
 )
