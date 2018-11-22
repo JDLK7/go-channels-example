@@ -1,10 +1,10 @@
 package pipe
 
-type PipeAction int
+type PipeAction string
 
 const (
-	// Default ingest method
-	Default 	PipeAction = iota
-	AddPrefix PipeAction = iota
-	AddSufix 	PipeAction = iota
+	// AddPrefix adds a prefix to an incoming message
+	AddPrefix PipeAction = "AddPrefix"
+	// AddSufix adds a sufix to an incoming message
+	AddSufix 	PipeAction = "AddSufix"
 )
