@@ -6,21 +6,23 @@ import (
 	"sync"
 )
 
+type Callable func(model.Journey) model.Journey
+
 type Pipe struct {}
 type Executor interface {
-	exec(inChannel, inQuit chan model.Journey, process func(model.Journey) model.Journey) (outChannel, outQuit chan model.Journey)
+	exec(chan model.Journey, chan model.Journey, Callable) (chan model.Journey, chan model.Journey)
 }
 
 type PrefixPipe struct {
-	Executor
+	executor Executor
 }
 type SufixPipe struct {
-	Executor
+	executor Executor
 }
 
 type Processor interface {
-	Run(inChannel, inQuit chan model.Journey) (chan model.Journey, chan model.Journey)
-	process(journey model.Journey) model.Journey
+	Run(chan model.Journey, chan model.Journey) (chan model.Journey, chan model.Journey)
+	process(model.Journey) model.Journey
 }
 
 var once sync.Once
@@ -31,9 +33,13 @@ func New(configManager *config.ConfigManager) Processor {
 	once.Do(func() {
 		switch PipeAction(configManager.ProcessorAction) {
 		case AddPrefix:
-			instance = new(PrefixPipe)
+			pipeInstance := new(PrefixPipe)
+			pipeInstance.executor = new(Pipe)
+			instance = pipeInstance
 		case AddSufix:
-			instance = new(SufixPipe)
+			pipeInstance := new(SufixPipe)
+			pipeInstance.executor = new(Pipe)
+			instance = pipeInstance
 		}
 	})
 
@@ -51,14 +57,12 @@ func (s *SufixPipe) process(journey model.Journey) model.Journey {
 }
 
 func (s *PrefixPipe) Run(inChannel, inQuit chan model.Journey) (chan model.Journey, chan model.Journey) {
-	return s.Executor.exec(inChannel, inQuit, s.process)
+	return s.executor.exec(inChannel, inQuit, s.process)
 }
 
 func (s *SufixPipe) Run(inChannel, inQuit chan model.Journey) (chan model.Journey, chan model.Journey) {
-	return s.Executor.exec(inChannel, inQuit, s.process)
+	return s.executor.exec(inChannel, inQuit, s.process)
 }
-
-type Callable func(model.Journey) model.Journey
 
 func (p *Pipe) exec(inChannel, inQuit chan model.Journey, process Callable) (outChannel, outQuit chan model.Journey) {
 	outChannel = make(chan model.Journey)
