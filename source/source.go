@@ -13,20 +13,9 @@ import (
 // shutdownDelay constant time (in miliseconds) that Run waits for sending a quit message
 const shutdownDelay = 10
 
-type Callable func(string) (model.Journey, error)
+type JSONSource struct {}
 
-type Source struct {}
-type Executor interface {
-	exec([]string, Callable) (chan model.Journey, chan model.Journey)
-}
-
-type JSONSource struct {
-	executor Executor
-}
-
-type XMLSource struct {
-	executor Executor
-}
+type XMLSource struct {}
 
 type Ingestor interface {
 	Run([]string) (chan model.Journey, chan model.Journey)
@@ -43,13 +32,9 @@ func New(configManager *config.ConfigManager) Ingestor {
 		switch SourceType(configManager.IngestorType) {
 		case Default:
 		case JSON:
-			sourceInstance := new(JSONSource)
-			sourceInstance.executor = new(Source)
-			instance = sourceInstance
+			instance = new(JSONSource)
 		case XML:
-			sourceInstance := new(XMLSource)
-			sourceInstance.executor = new(Source)
-			instance = sourceInstance
+			instance = new(XMLSource)
 		}
 	})
 
@@ -71,15 +56,7 @@ func (s *XMLSource) parse(subject string) (parsedSubject model.Journey, err erro
 	return
 }
 
-func (s *JSONSource) Run(journeys []string) (chan model.Journey, chan model.Journey) {
-	return s.executor.exec(journeys, s.parse)
-}
-
-func (s *XMLSource) Run(journeys []string) (chan model.Journey, chan model.Journey) {
-	return s.executor.exec(journeys, s.parse)
-}
-
-func (s *Source) exec(journeys []string, parse Callable) (out chan model.Journey, quit chan model.Journey) {
+func (s *JSONSource) Run(journeys []string) (out chan model.Journey, quit chan model.Journey) {
 	out = make(chan model.Journey)
 	quit = make(chan model.Journey)
 
@@ -87,7 +64,33 @@ func (s *Source) exec(journeys []string, parse Callable) (out chan model.Journey
 		var maxDelay int
 
 		for _, journey := range journeys {
-			parsedJourney, err := parse(journey)
+			parsedJourney, err := s.parse(journey)
+			if err != nil {
+				fmt.Printf("Unmarshall error: %v\n", err)
+			} else {
+				go channelAfterDelay(out, parsedJourney, parsedJourney.Time)
+
+				if parsedJourney.Time > maxDelay {
+					maxDelay = parsedJourney.Time
+				}
+			}
+		}
+
+		go channelAfterDelay(quit, model.Journey{}, maxDelay + shutdownDelay)
+	}()
+
+	return
+}
+
+func (s *XMLSource) Run(journeys []string) (out chan model.Journey, quit chan model.Journey) {
+	out = make(chan model.Journey)
+	quit = make(chan model.Journey)
+
+	go func() {
+		var maxDelay int
+
+		for _, journey := range journeys {
+			parsedJourney, err := s.parse(journey)
 			if err != nil {
 				fmt.Printf("Unmarshall error: %v\n", err)
 			} else {
